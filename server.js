@@ -77,9 +77,26 @@ function handleProxy(req, res, body) {
       }
 
       const apiUrl = `${GEMINI_ENDPOINT}/${model}:generateContent?key=${apiKey}`;
+      
+      // 构建请求内容，支持图片和文本
+      const parts = [];
+      
+      // 如果有图片，添加图片数据
+      if (data.image && data.image.data) {
+        parts.push({
+          inline_data: {
+            mime_type: data.image.mimeType || 'image/jpeg',
+            data: data.image.data
+          }
+        });
+      }
+      
+      // 添加文本
+      parts.push({ text: question });
+      
       const payload = JSON.stringify({
         contents: [{
-          parts: [{ text: question }]
+          parts: parts
         }]
       });
 

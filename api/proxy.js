@@ -18,7 +18,7 @@ export default async function handler(request, response) {
   }
 
   try {
-    const { type, question, code, version, apiKey } = request.body;
+    const { type, question, code, version, apiKey, image } = request.body;
 
     if (type === 'gemini') {
       // Call Gemini API
@@ -34,6 +34,22 @@ export default async function handler(request, response) {
 
       const apiUrl = `${GEMINI_ENDPOINT}/${model}:generateContent?key=${geminiApiKey}`;
       
+      // 构建请求内容，支持图片和文本
+      const parts = [];
+      
+      // 如果有图片，添加图片数据
+      if (image && image.data) {
+        parts.push({
+          inline_data: {
+            mime_type: image.mimeType || 'image/jpeg',
+            data: image.data
+          }
+        });
+      }
+      
+      // 添加文本
+      parts.push({ text: question });
+      
       const geminiResponse = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -41,7 +57,7 @@ export default async function handler(request, response) {
         },
         body: JSON.stringify({
           contents: [{
-            parts: [{ text: question }]
+            parts: parts
           }]
         })
       });
@@ -57,9 +73,18 @@ export default async function handler(request, response) {
         data: { content: text }
       });
 
-    } else {
-      // Call AI Studio API (for backward compatibility)
-      if (!code || !question || !apiKey) {
+    } else if (type === 'aistudio') {
+      // Call AI Studio API
+      const aiStudioAK = process.env.AI_STUDIO_AK || '';
+      
+      if (!aiStudioAK) {
+        return response.status(500).json({ 
+          success: false, 
+          errorMsg: 'AI Studio AK not configured. Set AI_STUDIO_AK in Vercel environment variables.' 
+        });
+      }
+
+      if (!code || !question) {
         return response.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -68,7 +93,7 @@ export default async function handler(request, response) {
       const aiResponse = await fetch(url, {
         method: 'POST',
         headers: {
-          'X-AK': apiKey,
+          'X-AK': aiStudioAK,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -85,6 +110,8 @@ export default async function handler(request, response) {
       response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
       response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
       return response.status(200).json(data);
+    } else {
+      return response.status(400).json({ error: 'Invalid type. Use "gemini" or "aistudio"' });
     }
 
   } catch (error) {

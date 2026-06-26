@@ -9,6 +9,7 @@ var POST_CONFIG = {
 
 var postResult = '';
 var transResult = '';
+var uploadedImage = null; // 存储上传的图片数据
 
 // 贴文生成的系统提示词
 var POST_SYSTEM_PROMPT = `# 角色：游戏社群贴文生成专家
@@ -45,6 +46,8 @@ var TRANSLATE_SYSTEM_PROMPT = `# 角色：游戏多语言翻译专家
 2. 如果输入中包含"术语参考"，必须严格使用提供的标准术语翻译
 3. 保留原文中的emoji和格式
 4. **重要：只输出翻译结果，不要任何开场白、解释或总结**
+5. **不要输出"好的"、"以下是"、"翻译如下"等任何中文说明**
+6. **直接从🇯🇵 日本語：开始输出，不要有任何前缀**
 
 ## 输出格式
 严格按以下格式输出，不要添加任何其他内容：
@@ -67,12 +70,19 @@ var TRANSLATE_SYSTEM_PROMPT = `# 角色：游戏多语言翻译专家
 🇹🇭 ภาษาไทย：
 （泰语翻译）`;
 
-async function callAI(question, systemPrompt) {
+async function callAI(question, systemPrompt, imageData = null) {
   var fullQuestion = systemPrompt ? systemPrompt + '\n\n---\n\n' + question : question;
+  var payload = { type: 'gemini', question: fullQuestion };
+  
+  // 如果有图片，添加到请求中
+  if (imageData) {
+    payload.image = imageData;
+  }
+  
   var r = await fetch('/api/proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'gemini', question: fullQuestion })
+    body: JSON.stringify(payload)
   });
   var d = await r.json();
   if (d.success && d.data && d.data.content) return d.data.content;
@@ -108,17 +118,26 @@ function buildRef(terms) {
 
 async function generatePost() {
   var input = document.getElementById('pa-input').value.trim();
-  if (!input) { alert('\u8bf7\u8f93\u5165\u7d20\u6750\u5185\u5bb9'); return; }
+  var hasImage = uploadedImage && uploadedImage.data;
+  
+  if (!input && !hasImage) {
+    alert('\u8bf7\u8f93\u5165\u7d20\u6750\u5185\u5bb9\u6216\u4e0a\u4f20\u56fe\u7247');
+    return;
+  }
+  
   var btn = document.getElementById('pa-gen-btn');
   var st = document.getElementById('pa-status');
   btn.disabled = true; btn.textContent = '\u23f3 \u751f\u6210\u4e2d...';
   st.textContent = '\u6b63\u5728\u8c03\u7528\u8d34\u6587\u52a9\u624b...'; st.className = 'status loading';
+  
   try {
-    var result = await callAI(input, POST_SYSTEM_PROMPT);
+    var question = input || '\u8bf7\u6839\u636e\u8fd9\u5f20\u56fe\u7247\u751f\u6210\u4e00\u7bc7\u6e38\u620f\u8fd0\u8425\u8d34\u6587';
+    var result = await callAI(question, POST_SYSTEM_PROMPT, hasImage ? uploadedImage : null);
     document.getElementById('pa-editor').value = result;
     postResult = result;
     st.textContent = '\u2705 \u8d34\u6587\u751f\u6210\u5b8c\u6210\uff01\u53ef\u5728\u4e0b\u65b9\u7f16\u8f91\u4fee\u6539'; st.className = 'status success';
   } catch (e) { st.textContent = '\u274c \u751f\u6210\u5931\u8d25: ' + e.message; st.className = 'status error'; }
+  
   btn.disabled = false; btn.textContent = '\ud83e\udd16 \u751f\u6210\u8d34\u6587';
 }
 
@@ -202,4 +221,56 @@ function copyOne(lang) {
     }
   }
   alert('\u672a\u627e\u5230 ' + name + ' \u90e8\u5206');
+}
+
+// ===== 图片上传相关 =====
+
+function handleImageUpload(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  
+  // 检查文件类型
+  if (!file.type.startsWith('image/')) {
+    alert('\u8bf7\u9009\u62e9\u56fe\u7247\u6587\u4ef6');
+    return;
+  }
+  
+  // 检查文件大小（限制 4MB，Gemini API 限制）
+  if (file.size > 4 * 1024 * 1024) {
+    alert('\u56fe\u7247\u592a\u5927\uff0c\u8bf7\u9009\u62e9 4MB \u4ee5\u5185\u7684\u56fe\u7247');
+    return;
+  }
+  
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.split(',')[1]; // 去掉 data:image/xxx;base64, 前缀
+    uploadedImage = {
+      mimeType: file.type,
+      data: base64
+    };
+    
+    // 显示预览
+    document.getElementById('image-preview').src = e.target.result;
+    document.getElementById('image-preview-container').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage() {
+  uploadedImage = null;
+  document.getElementById('image-preview-container').style.display = 'none';
+  document.getElementById('pa-image-input').value = '';
+}
+
+function clearAll() {
+  document.getElementById('pa-input').value = '';
+  document.getElementById('pa-editor').value = '';
+  removeImage();
+  var st = document.getElementById('pa-status');
+  st.textContent = '';
+  st.className = 'status';
+  document.getElementById('pa-trans-out').innerHTML = '';
+  document.getElementById('pa-proof-out').innerHTML = '';
+  transResult = '';
+  postResult = '';
 }

@@ -92,9 +92,23 @@
           <span class="pa-label">📥 输入素材（活动信息 / 更新日志 / 文案描述）</span>
           <textarea class="pa-textarea" id="pa-input" placeholder="粘贴文字素材，例如：V2.0版本更新，新增了搜打撤地宫玩法，限时10天活动，半天满级，1000%返利继承"></textarea>
         </div>
+        
+        <div class="pa-section">
+          <span class="pa-label">🖼️ 或上传截图（可选）</span>
+          <div class="image-upload-area" id="image-upload-area">
+            <input type="file" id="pa-image-input" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+            <button class="check-btn" onclick="document.getElementById('pa-image-input').click()" style="background:#17a2b8">📷 选择图片</button>
+            <span style="margin-left:10px;color:#666;font-size:13px">支持 JPG、PNG、GIF</span>
+          </div>
+          <div id="image-preview-container" style="display:none;margin-top:10px;position:relative">
+            <img id="image-preview" style="max-width:100%;max-height:300px;border:2px solid #e0e0e0;border-radius:8px">
+            <button onclick="removeImage()" style="position:absolute;top:5px;right:5px;background:#dc3545;color:white;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px">×</button>
+          </div>
+        </div>
+        
         <div class="pa-btn-row">
           <button class="check-btn" id="pa-gen-btn" onclick="generatePost()">🤖 生成贴文</button>
-          <button class="check-btn" style="background:#999" onclick="document.getElementById('pa-input').value='';document.getElementById('pa-editor').value=''">清空</button>
+          <button class="check-btn" style="background:#999" onclick="clearAll()">清空</button>
         </div>
         <div class="pa-section">
           <span class="pa-label">📝 贴文编辑（可修改 / 可直接手写）</span>
