@@ -1,8 +1,7 @@
 /**
- * 本地代理服务器 - Node.js 版本
- * 绕过 CORS 限制，转发 API 请求到 AI Studio
- * 运行方式: node server.js
- * 然后访问: http://localhost:8080
+ * 术语校对工具 - 服务器部署版
+ * 功能：1) 托管网站静态文件  2) 中转 AI 接口请求（解决 CORS）
+ * 部署到阿里云服务器后，浏览器访问这个服务器，服务器再去调 idealab
  */
 
 const http = require('http');
@@ -11,34 +10,39 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-const PORT = 8080;
+const PORT = 3000;
 const AI_STUDIO_BASE = "https://idealab.alibaba-inc.com/api/aiapp/run";
-const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// 从 config.json 读取 API Key
-let config = {};
-try {
-  config = JSON.parse(fs.readFileSync('./config.json', 'utf-8'));
-} catch (e) {
-  console.log('Warning: config.json not found or invalid');
-}
+// API 密钥（写在服务器端，前端看不到）
+const AI_STUDIO_AK = "5c406f762ebb2b38aba46d5511ea4ff8";
 
-// MIME 类型映射
-const mimeTypes = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
+// 助手配置
+const ASSISTANTS = {
+  a: { code: 'vAKIOhyPlmw', ver: '1.0.4' },
+  b: { code: 'KLsOezRanUZ', ver: '1.1.0' }
 };
 
-function serveStaticFile(res, filePath) {
+// MIME 类型
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf'
+};
+
+// ===== 静态文件服务 =====
+function serveStatic(res, filePath) {
   const ext = path.extname(filePath).toLowerCase();
-  const contentType = mimeTypes[ext] || 'application/octet-stream';
+  const contentType = MIME[ext] || 'application/octet-stream';
 
   fs.readFile(filePath, (err, content) => {
     if (err) {
@@ -50,209 +54,155 @@ function serveStaticFile(res, filePath) {
         res.end('Server Error: ' + err.code);
       }
     } else {
-      res.writeHead(200, { 'Content-Type': contentType });
-      res.end(content, 'utf-8');
+      // 大文件（terms.json 41MB）加缓存
+      const headers = { 'Content-Type': contentType };
+      if (ext === '.json' || ext === '.css' || ext === '.js') {
+        headers['Cache-Control'] = 'public, max-age=3600';
+      }
+      res.writeHead(200, headers);
+      res.end(content);
     }
   });
 }
 
-function handleProxy(req, res, body) {
+// ===== AI 接口中转 =====
+function handleAIProxy(req, res, body) {
   try {
     const data = JSON.parse(body);
-    const type = data.type || 'gemini'; // 'gemini' 或 'aistudio'
+    const assistantType = data.assistant || 'a'; // 'a' 或 'b'
     const question = data.question || '';
 
-    if (type === 'gemini') {
-      // 调用 Gemini API
-      const apiKey = config.gemini?.apiKey || '';
-      const model = config.gemini?.model || 'gemini-pro';
-      
-      if (!apiKey) {
-        res.writeHead(500, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        });
-        res.end(JSON.stringify({ error: 'Gemini API Key not configured' }));
-        return;
-      }
-
-      const apiUrl = `${GEMINI_ENDPOINT}/${model}:generateContent?key=${apiKey}`;
-      
-      // 构建请求内容，支持图片和文本
-      const parts = [];
-      
-      // 如果有图片，添加图片数据
-      if (data.image && data.image.data) {
-        parts.push({
-          inline_data: {
-            mime_type: data.image.mimeType || 'image/jpeg',
-            data: data.image.data
-          }
-        });
-      }
-      
-      // 添加文本
-      parts.push({ text: question });
-      
-      const payload = JSON.stringify({
-        contents: [{
-          parts: parts
-        }]
-      });
-
-      const parsedUrl = new URL(apiUrl);
-      const options = {
-        hostname: parsedUrl.hostname,
-        port: 443,
-        path: parsedUrl.pathname + parsedUrl.search,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload)
-        }
-      };
-
-      const apiReq = https.request(options, (apiRes) => {
-        let result = '';
-        apiRes.on('data', (chunk) => { result += chunk; });
-        apiRes.on('end', () => {
-          try {
-            const geminiResponse = JSON.parse(result);
-            const text = geminiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            res.writeHead(200, {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            });
-            res.end(JSON.stringify({
-              success: true,
-              data: { content: text }
-            }));
-          } catch (e) {
-            res.writeHead(500, {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            });
-            res.end(JSON.stringify({ error: 'Failed to parse Gemini response' }));
-          }
-        });
-      });
-
-      apiReq.on('error', (e) => {
-        res.writeHead(500, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        });
-        res.end(JSON.stringify({ error: e.message }));
-      });
-
-      apiReq.write(payload);
-      apiReq.end();
-
-    } else {
-      // 调用 AI Studio API
-      const code = data.code || '';
-      const version = data.version || '1.0.0';
-      const ak = data.apiKey || '';
-
-      const apiUrl = `${AI_STUDIO_BASE}/${code}/${version}`;
-      const payload = JSON.stringify({
-        empId: '000000',
-        question: question,
-        sessionId: 'proxy-' + Date.now(),
-        stream: false
-      });
-
-      const parsedUrl = new URL(apiUrl);
-      const options = {
-        hostname: parsedUrl.hostname,
-        port: 443,
-        path: parsedUrl.pathname,
-        method: 'POST',
-        headers: {
-          'X-AK': ak,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload)
-        }
-      };
-
-      const apiReq = https.request(options, (apiRes) => {
-        let result = '';
-        apiRes.on('data', (chunk) => { result += chunk; });
-        apiRes.on('end', () => {
-          res.writeHead(apiRes.statusCode, {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          });
-          res.end(result);
-        });
-      });
-
-      apiReq.on('error', (e) => {
-        res.writeHead(500, {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        });
-        res.end(JSON.stringify({ error: e.message }));
-      });
-
-      apiReq.write(payload);
-      apiReq.end();
+    const assistant = ASSISTANTS[assistantType];
+    if (!assistant) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, errorMsg: '未知的助手类型' }));
+      return;
     }
+
+    const apiUrl = `${AI_STUDIO_BASE}/${assistant.code}/${assistant.ver}`;
+    const payload = JSON.stringify({
+      empId: '000000',
+      question: question,
+      sessionId: 'proxy-' + Date.now(),
+      stream: false,
+      keepConnection: true
+    });
+
+    const parsedUrl = new URL(apiUrl);
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: 443,
+      path: parsedUrl.pathname,
+      method: 'POST',
+      headers: {
+        'X-AK': AI_STUDIO_AK,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+
+    console.log(`[${new Date().toLocaleString()}] AI请求: 助手${assistantType} -> ${assistant.code}`);
+
+    const apiReq = https.request(options, (apiRes) => {
+      let result = '';
+      apiRes.on('data', (chunk) => { result += chunk; });
+      apiRes.on('end', () => {
+        res.writeHead(200, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(result);
+        console.log(`[${new Date().toLocaleString()}] AI响应完成: 助手${assistantType}`);
+      });
+    });
+
+    // 超时设置 60 秒（AI 生成有时较慢）
+    apiReq.setTimeout(60000, () => {
+      apiReq.destroy();
+      res.writeHead(504, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, errorMsg: 'AI 接口超时（60秒）' }));
+      console.log(`[${new Date().toLocaleString()}] AI超时: 助手${assistantType}`);
+    });
+
+    apiReq.on('error', (e) => {
+      res.writeHead(500, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({ success: false, errorMsg: '代理请求失败: ' + e.message }));
+      console.log(`[${new Date().toLocaleString()}] AI错误: 助手${assistantType} - ${e.message}`);
+    });
+
+    apiReq.write(payload);
+    apiReq.end();
 
   } catch (e) {
     res.writeHead(500, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*'
     });
-    res.end(JSON.stringify({ error: e.message }));
+    res.end(JSON.stringify({ success: false, errorMsg: e.message }));
   }
 }
 
+// ===== 健康检查 =====
+function handleHealth(res) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    status: 'ok',
+    time: new Date().toLocaleString(),
+    uptime: process.uptime() + 's'
+  }));
+}
+
+// ===== 主路由 =====
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // 处理 CORS 预检请求
+  // CORS 预检
   if (req.method === 'OPTIONS') {
     res.writeHead(200, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400'
     });
     res.end();
     return;
   }
 
-  // 处理 API 代理请求
-  if (pathname === '/api/proxy' && req.method === 'POST') {
+  // API: AI 中转
+  if (pathname === '/api/ai' && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => {
-      handleProxy(req, res, body);
-    });
+    req.on('end', () => handleAIProxy(req, res, body));
     return;
   }
 
-  // 处理静态文件
-  let filePath = '.' + pathname;
-  if (filePath === './') {
-    filePath = './index.html';
+  // API: 健康检查
+  if (pathname === '/api/health') {
+    handleHealth(res);
+    return;
   }
 
-  serveStaticFile(res, filePath);
+  // 静态文件
+  let filePath = path.join(__dirname, pathname === '/' ? 'index.html' : pathname);
+  // 安全检查：防止目录穿越
+  if (!filePath.startsWith(__dirname)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+  serveStatic(res, filePath);
 });
 
-// 启动服务器
-server.listen(PORT, () => {
-  const serverUrl = `http://localhost:${PORT}`;
-  console.log('='.repeat(50));
-  console.log('  Game Terminology Tool + Post Assistant');
-  console.log(`  Open: ${serverUrl}`);
-  console.log('  Press Ctrl+C to stop');
-  console.log('='.repeat(50));
-
-  // 自动打开浏览器
-  const start = (process.platform === 'darwin' ? 'open' : 
-                 process.platform === 'win32' ? 'start' : 'xdg-open');
-  require('child_process').exec(`${start} ${serverUrl}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log('========================================');
+  console.log('  术语校对工具 - 服务器已启动');
+  console.log('  端口: ' + PORT);
+  console.log('  访问: http://你的服务器IP:' + PORT);
+  console.log('  AI中转: POST /api/ai');
+  console.log('  健康检查: GET /api/health');
+  console.log('========================================');
 });

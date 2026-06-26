@@ -1,11 +1,6 @@
 /* Post Assistant Module - Chinese UI */
 
-var POST_CONFIG = {
-  type: 'aistudio', // 'gemini' or 'aistudio'
-  a: { code: 'vAKIOhyPlmw', ver: '1.0.4' },
-  b: { code: 'KLsOezRanUZ', ver: '1.1.0' },
-  key: '5c406f762ebb2b38aba46d5511ea4ff8'
-};
+// 配置已移到服务器端（server.js），前端不再暴露密钥
 
 var postResult = '';
 var transResult = '';
@@ -73,21 +68,15 @@ var TRANSLATE_SYSTEM_PROMPT = `# 角色：游戏多语言翻译专家
 async function callAI(question, systemPrompt, imageData = null, useAssistant = 'a') {
   var fullQuestion = systemPrompt ? systemPrompt + '\n\n---\n\n' + question : question;
   
-  // AI Studio 直接调用（使用 idealab 域名，支持 CORS）
-  var assistant = useAssistant === 'a' ? POST_CONFIG.a : POST_CONFIG.b;
-  var url = 'https://idealab.alibaba-inc.com/api/aiapp/run/' + assistant.code + '/' + assistant.ver;
-  
-  var r = await fetch(url, {
+  // 通过自己服务器的中转接口调用，不再直接调 idealab（解决 CORS 问题）
+  var r = await fetch('/api/ai', {
     method: 'POST',
     headers: {
-      'X-AK': POST_CONFIG.key,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      empId: '000000',
-      question: fullQuestion,
-      sessionId: 'session-' + Date.now(),
-      stream: false
+      assistant: useAssistant,
+      question: fullQuestion
     })
   });
   
@@ -139,9 +128,8 @@ async function generatePost() {
   
   try {
     var question = input || '请根据这张图片生成一篇游戏运营贴文';
-    // 对于 AI Studio，助手已有系统提示词，直接发送问题
-    var systemPrompt = POST_CONFIG.type === 'aistudio' ? null : POST_SYSTEM_PROMPT;
-    var result = await callAI(question, systemPrompt, hasImage ? uploadedImage : null, 'a');
+    // 助手A（idealab上）已内置系统提示词，直接发问题即可
+    var result = await callAI(question, null, hasImage ? uploadedImage : null, 'a');
     document.getElementById('pa-editor').value = result;
     postResult = result;
     st.textContent = '✅ 贴文生成完成！可在下方编辑修改'; st.className = 'status success';
@@ -161,9 +149,8 @@ async function translatePost() {
     var terms = findTerms(post);
     var ref = buildRef(terms);
     var q = '请把以下贴文翻译成日语、英语、韩语、繁中、越南语、泰语：\n' + post + ref;
-    // 对于 AI Studio，助手已有系统提示词，直接发送问题，使用助手 B
-    var systemPrompt = POST_CONFIG.type === 'aistudio' ? null : TRANSLATE_SYSTEM_PROMPT;
-    var result = await callAI(q, systemPrompt, null, 'b');
+    // 助手B（idealab上）已内置系统提示词，直接发问题即可
+    var result = await callAI(q, null, null, 'b');
     transResult = result;
     var html = '<div style="margin:10px 0"><b>📋 翻译结果（参考了 ' + terms.length + ' 个术语）</b></div>';
     html += '<div class="trans-out">' + esc(result).replace(/\n/g, '<br>') + '</div>';
