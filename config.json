@@ -3,5 +3,16 @@
     "apiKey": "AQ.Ab8RN6KI_qU2PZzq4JjljGgEdvPFfGHIn_AyiGagGwrIQDAVDg",
     "model": "gemini-2.0-flash-exp",
     "endpoint": "https://generativelanguage.googleapis.com/v1beta/models"
+  },
+  "aistudio": {
+    "apiKey": "5c406f762ebb2b38aba46d5511ea4ff8",
+    "assistantA": {
+      "code": "vAKIOhyPlmw",
+      "version": "1.0.4"
+    },
+    "assistantB": {
+      "code": "KLsOezRanUZ",
+      "version": "1.1.0"
+    }
   }
 }

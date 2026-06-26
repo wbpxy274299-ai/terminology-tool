@@ -73,30 +73,24 @@ var TRANSLATE_SYSTEM_PROMPT = `# 角色：游戏多语言翻译专家
 async function callAI(question, systemPrompt, imageData = null, useAssistant = 'a') {
   var fullQuestion = systemPrompt ? systemPrompt + '\n\n---\n\n' + question : question;
   
-  var payload;
-  if (POST_CONFIG.type === 'aistudio') {
-    // AI Studio 调用
-    var assistant = useAssistant === 'a' ? POST_CONFIG.a : POST_CONFIG.b;
-    payload = { 
-      type: 'aistudio', 
-      code: assistant.code,
-      version: assistant.ver,
-      apiKey: POST_CONFIG.key,
-      question: fullQuestion 
-    };
-  } else {
-    // Gemini 调用
-    payload = { type: 'gemini', question: fullQuestion };
-    if (imageData) {
-      payload.image = imageData;
-    }
-  }
+  // AI Studio 直接调用（使用 idealab 域名，支持 CORS）
+  var assistant = useAssistant === 'a' ? POST_CONFIG.a : POST_CONFIG.b;
+  var url = 'https://idealab.alibaba-inc.com/api/aiapp/run/' + assistant.code + '/' + assistant.ver;
   
-  var r = await fetch('/api/proxy', {
+  var r = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    headers: {
+      'X-AK': POST_CONFIG.key,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      empId: '000000',
+      question: fullQuestion,
+      sessionId: 'session-' + Date.now(),
+      stream: false
+    })
   });
+  
   var d = await r.json();
   if (d.success && d.data && d.data.content) return d.data.content;
   throw new Error(d.errorMsg || d.error || 'API调用失败');

@@ -75,17 +75,18 @@ export default async function handler(request, response) {
 
     } else if (type === 'aistudio') {
       // Call AI Studio API
-      const aiStudioAK = process.env.AI_STUDIO_AK || '';
+      // 优先使用请求体中的 apiKey，如果没传则用环境变量
+      const aiStudioAK = apiKey || process.env.AI_STUDIO_AK || '';
       
       if (!aiStudioAK) {
         return response.status(500).json({ 
           success: false, 
-          errorMsg: 'AI Studio AK not configured. Set AI_STUDIO_AK in Vercel environment variables.' 
+          errorMsg: 'AI Studio AK not provided. Please pass apiKey in request body or set AI_STUDIO_AK in Vercel environment variables.' 
         });
       }
 
       if (!code || !question) {
-        return response.status(400).json({ error: 'Missing required fields' });
+        return response.status(400).json({ error: 'Missing required fields: code and question' });
       }
 
       const url = `https://idealab.alibaba-inc.com/api/aiapp/run/${code}/${version || '1.0.0'}`;

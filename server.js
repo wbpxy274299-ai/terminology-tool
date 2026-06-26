@@ -12,7 +12,7 @@ const path = require('path');
 const url = require('url');
 
 const PORT = 8080;
-const AI_STUDIO_BASE = "https://aistudio.alibaba-inc.com/api/aiapp/run";
+const AI_STUDIO_BASE = "https://idealab.alibaba-inc.com/api/aiapp/run";
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // 从 config.json 读取 API Key

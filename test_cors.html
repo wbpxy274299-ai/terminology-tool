@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CORS Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; background: #f5f0ff; }
+    button { padding: 12px 24px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; background: #764ba2; color: white; margin: 5px; }
+    pre { background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; white-space: pre-wrap; word-break: break-all; }
+    h1 { color: #764ba2; }
+    .ok { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🧪 AI Studio CORS 测试</h1>
+  <p>点击下面的按钮，测试浏览器能否直接调用 AI Studio API。</p>
+  
+  <button onclick="testAPI('aistudio')">测试 aistudio 域名</button>
+  <button onclick="testAPI('idealab')">测试 idealab 域名</button>
+  
+  <h2>结果：</h2>
+  <pre id="result">等待测试...</pre>
+
+  <script>
+    async function testAPI(domain) {
+      var url = domain === 'idealab' 
+        ? 'https://idealab.alibaba-inc.com/api/aiapp/run/vAKIOhyPlmw/1.0.4'
+        : 'https://aistudio.alibaba-inc.com/api/aiapp/run/vAKIOhyPlmw/1.0.4';
+      
+      var result = document.getElementById('result');
+      result.textContent = '⏳ 正在测试 ' + url + ' ...';
+      
+      try {
+        var r = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-AK': '5c406f762ebb2b38aba46d5511ea4ff8',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            empId: '000000',
+            question: '你好，请简单介绍一下搜打撤玩法',
+            sessionId: 'cors-test-' + Date.now(),
+            stream: false
+          })
+        });
+        var d = await r.json();
+        if (d.success) {
+          result.innerHTML = '<span class="ok">✅ 成功！CORS 没有问题！</span>\n\n' + 
+            '域名：' + domain + '\n' +
+            '返回内容：\n' + (d.data && d.data.content ? d.data.content.substring(0, 500) : JSON.stringify(d, null, 2));
+        } else {
+          result.innerHTML = '<span class="fail">❌ API 返回错误</span>\n\n' + JSON.stringify(d, null, 2);
+        }
+      } catch (e) {
+        result.innerHTML = '<span class="fail">❌ 请求失败（可能是 CORS 问题）</span>\n\n' + 
+          '错误：' + e.message + '\n\n' +
+          '这说明浏览器阻止了跨域请求，需要代理服务器。';
+      }
+    }
+  </script>
+</body>
+</html>
