@@ -81,44 +81,13 @@
     <div class="card">
       <!-- Tab 切换 -->
       <div class="tabs">
-        <button class="tab active" data-tab="search">🔍 搜索</button>
+        <button class="tab active" data-tab="post">✍️ 贴文助手</button>
         <button class="tab" data-tab="check">📝 校对</button>
         <button class="tab" data-tab="batch">📦 批量校对</button>
-        <button class="tab" data-tab="post">✍️ 贴文助手</button>
-      </div>
-
-      <!-- 搜索面板 -->
-      <div class="panel active" id="panel-search">
-        <div class="search-box">
-          <input type="text" id="search-input" placeholder="输入关键词搜索..." autocomplete="off">
-          <button onclick="doSearch()">搜索</button>
-        </div>
-        <div class="count" id="search-count"></div>
-        <div class="results" id="search-results"></div>
-      </div>
-
-      <!-- 校对面板 -->
-      <div class="panel" id="panel-check">
-        <div class="count" id="stats-bar"></div>
-        <textarea class="check-input" id="check-input" placeholder="输入单词或粘贴整段文案，自动校对术语...
-支持中文、日语、英语、韩语、繁中、越南语、泰语、印尼语"></textarea>
-        <button class="check-btn" onclick="doCheck()">开始校对</button>
-        <div class="check-result" id="check-result"></div>
-      </div>
-
-      <!-- 批量校对面板 -->
-      <div class="panel" id="panel-batch">
-        <div class="batch-upload" id="batch-upload" onclick="document.getElementById('batch-file').click()">
-          <div class="icon">📁</div>
-          <div>点击或拖拽上传文件</div>
-          <div class="hint">支持 .txt / .json / .csv（每行一条文案）</div>
-          <input type="file" id="batch-file" accept=".txt,.json,.csv">
-        </div>
-        <div id="batch-result"></div>
       </div>
 
       <!-- 贴文助手面板 -->
-      <div class="panel" id="panel-post">
+      <div class="panel active" id="panel-post">
         <div class="pa-section">
           <span class="pa-label">📥 输入素材（活动信息 / 更新日志 / 文案描述）</span>
           <textarea class="pa-textarea" id="pa-input" placeholder="粘贴文字素材，例如：V2.0版本更新，新增了搜打撤地宫玩法，限时10天活动，半天满级，1000%返利继承"></textarea>
@@ -140,6 +109,26 @@
           <button class="check-btn" onclick="proofreadTranslation()" style="background:#28a745">✅ 校对翻译</button>
         </div>
         <div id="pa-proof-out"></div>
+      </div>
+
+      <!-- 校对面板 -->
+      <div class="panel" id="panel-check">
+        <div class="count" id="stats-bar"></div>
+        <textarea class="check-input" id="check-input" placeholder="输入单词或粘贴整段文案，自动校对术语...
+支持中文、日语、英语、韩语、繁中、越南语、泰语、印尼语"></textarea>
+        <button class="check-btn" onclick="doCheck()">开始校对</button>
+        <div class="check-result" id="check-result"></div>
+      </div>
+
+      <!-- 批量校对面板 -->
+      <div class="panel" id="panel-batch">
+        <div class="batch-upload" id="batch-upload" onclick="document.getElementById('batch-file').click()">
+          <div class="icon">📁</div>
+          <div>点击或拖拽上传文件</div>
+          <div class="hint">支持 .txt / .json / .csv（每行一条文案）</div>
+          <input type="file" id="batch-file" accept=".txt,.json,.csv">
+        </div>
+        <div id="batch-result"></div>
       </div>
     </div>
   </div>

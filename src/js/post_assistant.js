@@ -1,6 +1,7 @@
 /* Post Assistant Module - Chinese UI */
 
 var POST_CONFIG = {
+  type: 'gemini', // 'gemini' or 'aistudio'
   a: { code: 'vAKIOhyPlmw', ver: '1.0.0' },
   b: { code: 'KLsOezRanUZ', ver: '1.1.0' },
   key: '5c406f762ebb2b38aba46d5511ea4ff8'
@@ -9,15 +10,73 @@ var POST_CONFIG = {
 var postResult = '';
 var transResult = '';
 
-async function callAI(code, ver, q) {
+// 贴文生成的系统提示词
+var POST_SYSTEM_PROMPT = `# 角色：游戏社群贴文生成专家
+
+## 身份
+你是专业的游戏海外社群运营文案专家，擅长根据用户提供的素材生成适合海外社群平台发布的运营贴文。
+
+## 输出格式
+严格按以下格式输出：
+
+📝 贴文内容：
+（贴文正文，150-300字，适配Twitter/X平台）
+
+📌 贴文类型：（公告/活动/更新/互动/营销）
+🎯 核心卖点：（一句话概括）
+📋 关键术语：（列出涉及的游戏术语，如：搜打撤、地宫、返利等）
+
+## 风格要求
+- 开头用吸引眼球的emoji和短句
+- 信息层次清晰：What → Why → How
+- 结尾加互动引导
+- 适当使用hashtag（不超过3个）
+- 输出必须是中文`;
+
+// 翻译的系统提示词
+var TRANSLATE_SYSTEM_PROMPT = `# 角色：游戏多语言翻译专家
+
+## 身份
+你是专业的游戏本地化翻译专家，精通中文与以下6种语言之间的翻译：
+日语、英语、韩语、繁体中文、越南语、泰语
+
+## 规则
+1. 默认翻译为全部6种语言
+2. 如果输入中包含"术语参考"，必须严格使用提供的标准术语翻译
+3. 保留原文中的emoji和格式
+4. **重要：只输出翻译结果，不要任何开场白、解释或总结**
+
+## 输出格式
+严格按以下格式输出，不要添加任何其他内容：
+
+🇯🇵 日本語：
+（日语翻译）
+
+🇬🇧 English：
+（英语翻译）
+
+🇰🇷 한국어：
+（韩语翻译）
+
+🇹🇼 繁體中文：
+（繁中翻译）
+
+🇻🇳 Tiếng Việt：
+（越南语翻译）
+
+🇹🇭 ภาษาไทย：
+（泰语翻译）`;
+
+async function callAI(question, systemPrompt) {
+  var fullQuestion = systemPrompt ? systemPrompt + '\n\n---\n\n' + question : question;
   var r = await fetch('/api/proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: code, version: ver, question: q, apiKey: POST_CONFIG.key })
+    body: JSON.stringify({ type: 'gemini', question: fullQuestion })
   });
   var d = await r.json();
   if (d.success && d.data && d.data.content) return d.data.content;
-  throw new Error(d.errorMsg || d.error || 'API\u8c03\u7528\u5931\u8d25');
+  throw new Error(d.errorMsg || d.error || 'API调用失败');
 }
 
 function findTerms(text) {
@@ -55,7 +114,7 @@ async function generatePost() {
   btn.disabled = true; btn.textContent = '\u23f3 \u751f\u6210\u4e2d...';
   st.textContent = '\u6b63\u5728\u8c03\u7528\u8d34\u6587\u52a9\u624b...'; st.className = 'status loading';
   try {
-    var result = await callAI(POST_CONFIG.a.code, POST_CONFIG.a.ver, input);
+    var result = await callAI(input, POST_SYSTEM_PROMPT);
     document.getElementById('pa-editor').value = result;
     postResult = result;
     st.textContent = '\u2705 \u8d34\u6587\u751f\u6210\u5b8c\u6210\uff01\u53ef\u5728\u4e0b\u65b9\u7f16\u8f91\u4fee\u6539'; st.className = 'status success';
@@ -74,7 +133,7 @@ async function translatePost() {
     var terms = findTerms(post);
     var ref = buildRef(terms);
     var q = '\u8bf7\u628a\u4ee5\u4e0b\u8d34\u6587\u7ffb\u8bd1\u6210\u65e5\u8bed\u3001\u82f1\u8bed\u3001\u97e9\u8bed\u3001\u7e41\u4e2d\u3001\u8d8a\u5357\u8bed\u3001\u6cf0\u8bed\uff1a\n' + post + ref;
-    var result = await callAI(POST_CONFIG.b.code, POST_CONFIG.b.ver, q);
+    var result = await callAI(q, TRANSLATE_SYSTEM_PROMPT);
     transResult = result;
     var html = '<div style="margin:10px 0"><b>\ud83d\udccb \u7ffb\u8bd1\u7ed3\u679c\uff08\u53c2\u8003\u4e86 ' + terms.length + ' \u4e2a\u672f\u8bed\uff09</b></div>';
     html += '<div class="trans-out">' + esc(result).replace(/\n/g, '<br>') + '</div>';
