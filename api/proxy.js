@@ -88,7 +88,7 @@ export default async function handler(request, response) {
         return response.status(400).json({ error: 'Missing required fields' });
       }
 
-      const url = `https://aistudio.alibaba-inc.com/api/aiapp/run/${code}/${version || '1.0.0'}`;
+      const url = `https://idealab.alibaba-inc.com/api/aiapp/run/${code}/${version || '1.0.0'}`;
 
       const aiResponse = await fetch(url, {
         method: 'POST',
