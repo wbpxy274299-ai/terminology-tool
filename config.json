@@ -1,0 +1,7 @@
+{
+  "gemini": {
+    "apiKey": "AQ.Ab8RN6KI_qU2PZzq4JjljGgEdvPFfGHIn_AyiGagGwrIQDAVDg",
+    "model": "gemini-2.0-flash-exp",
+    "endpoint": "https://generativelanguage.googleapis.com/v1beta/models"
+  }
+}
