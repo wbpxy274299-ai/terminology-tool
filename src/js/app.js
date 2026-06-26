@@ -1,10 +1,8 @@
-/* ========================================
-   游戏术语校对工具 - 主入口 / 事件绑定
-   ======================================== */
+/* 修复版 app.js - 替换 src/js/app.js */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Tab 切换
-  document.querySelectorAll('.tab').forEach(tab => {
+  const tabs = document.querySelectorAll('.tab');
+  tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => {
         t.classList.remove('active');
@@ -14,25 +12,30 @@ document.addEventListener('DOMContentLoaded', () => {
       tab.classList.add('active');
       tab.style.background = '#fff';
       tab.style.color = '#764ba2';
-
+      const target = tab.getAttribute('data-tab');
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      const panel = document.getElementById('panel-' + target);
+      if (panel) panel.classList.add('active');
     });
   });
 
-  // 搜索回车触发
-  document.getElementById('search-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doSearch();
-  });
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  }
 
-  // 批量校对文件上传
-  document.getElementById('batch-file').addEventListener('change', function (e) {
-    if (e.target.files[0]) handleBatchCheck(e.target.files[0]);
-  });
+  const batchFile = document.getElementById('batch-file');
+  if (batchFile) {
+    batchFile.addEventListener('change', function (e) {
+      if (e.target.files[0]) handleBatchCheck(e.target.files[0]);
+    });
+  }
 
-  // 初始化更新模块
-  initUpdateModule();
+  if (typeof initUpdateModule === 'function') {
+    try { initUpdateModule(); } catch(e) {}
+  }
 
-  // 加载数据
-  loadData();
+  if (typeof loadData === 'function') {
+    try { loadData(); } catch(e) {}
+  }
 });
