@@ -6,12 +6,14 @@
   <title>游戏术语校对工具 — 模块化版</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="src/css/style.css">
+  <link rel="stylesheet" href="src/css/post_assistant.css">
   <script src="src/js/config.js"></script>
   <script src="src/js/utils.js"></script>
   <script src="src/js/data.js"></script>
   <script src="src/js/search.js"></script>
   <script src="src/js/check.js"></script>
   <script src="src/js/update.js"></script>
+  <script src="src/js/post_assistant.js"></script>
   <script src="src/js/app.js"></script>
 </head>
 <body>
@@ -65,6 +67,7 @@
     📖 游戏术语校对工具
     <span class="ver">模块化版</span>
     <button class="update-btn" onclick="openUpdateModal()">🔄 更新术语表</button>
+    <span class="ver-date" id="ver-date"></span>
   </h1>
 
   <!-- 加载状态 -->
@@ -81,6 +84,7 @@
         <button class="tab active" data-tab="search">🔍 搜索</button>
         <button class="tab" data-tab="check">📝 校对</button>
         <button class="tab" data-tab="batch">📦 批量校对</button>
+        <button class="tab" data-tab="post">✍️ 贴文助手</button>
       </div>
 
       <!-- 搜索面板 -->
@@ -111,6 +115,31 @@
           <input type="file" id="batch-file" accept=".txt,.json,.csv">
         </div>
         <div id="batch-result"></div>
+      </div>
+
+      <!-- 贴文助手面板 -->
+      <div class="panel" id="panel-post">
+        <div class="pa-section">
+          <span class="pa-label">📥 输入素材（活动信息 / 更新日志 / 文案描述）</span>
+          <textarea class="pa-textarea" id="pa-input" placeholder="粘贴文字素材，例如：V2.0版本更新，新增了搜打撤地宫玩法，限时10天活动，半天满级，1000%返利继承"></textarea>
+        </div>
+        <div class="pa-btn-row">
+          <button class="check-btn" id="pa-gen-btn" onclick="generatePost()">🤖 生成贴文</button>
+          <button class="check-btn" style="background:#999" onclick="document.getElementById('pa-input').value='';document.getElementById('pa-editor').value=''">清空</button>
+        </div>
+        <div class="pa-section">
+          <span class="pa-label">📝 贴文编辑（可修改 / 可直接手写）</span>
+          <textarea class="pa-editor" id="pa-editor" placeholder="AI 生成的贴文会显示在这里，你也可以直接手写..."></textarea>
+        </div>
+        <div class="pa-btn-row">
+          <button class="check-btn" id="pa-trans-btn" onclick="translatePost()" style="background:linear-gradient(135deg,#667eea,#764ba2)">🌐 翻译成 6 语言</button>
+        </div>
+        <div class="status" id="pa-status"></div>
+        <div id="pa-trans-out"></div>
+        <div class="pa-btn-row" style="margin-top:10px">
+          <button class="check-btn" onclick="proofreadTranslation()" style="background:#28a745">✅ 校对翻译</button>
+        </div>
+        <div id="pa-proof-out"></div>
       </div>
     </div>
   </div>

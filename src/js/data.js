@@ -5,6 +5,7 @@
 
 let TERMS = [];
 let ALL_INDEX = {};
+let VERSION_INFO = null;
 
 /**
  * 建立搜索索引
@@ -25,9 +26,17 @@ async function loadData() {
   showLoading('正在加载术语数据...');
 
   try {
-    const resp = await fetch('data/terms.json');
-    if (!resp.ok) throw new Error('无法加载 terms.json，请确认文件存在');
-    TERMS = await resp.json();
+    const [termsResp, versionResp] = await Promise.all([
+      fetch('data/terms.json'),
+      fetch('data/version.json')
+    ]);
+    
+    if (!termsResp.ok) throw new Error('无法加载 terms.json，请确认文件存在');
+    TERMS = await termsResp.json();
+    
+    if (versionResp.ok) {
+      VERSION_INFO = await versionResp.json();
+    }
   } catch (e) {
     showLoading('数据加载失败: ' + e.message);
     return;
@@ -36,6 +45,19 @@ async function loadData() {
   rebuildIndex();
   hideLoading();
   updateStatsBar();
+  displayVersionInfo();
+}
+
+/**
+ * 显示版本信息
+ */
+function displayVersionInfo() {
+  const el = document.getElementById('ver-date');
+  if (el && VERSION_INFO) {
+    const ver = VERSION_INFO.version || '';
+    const count = VERSION_INFO.count ? ' ' + VERSION_INFO.count.toLocaleString() + '\u6761' : '';
+    el.textContent = '\u5168\u91CF' + ver + count;
+  }
 }
 
 /**

@@ -25,6 +25,10 @@ h1 .ver { font-size: 12px; background: rgba(255,255,255,.2); padding: 3px 10px; 
   border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .2s;
 }
 .update-btn:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.ver-date {
+  font-size: 12px; background: rgba(255,255,255,.15); padding: 4px 12px;
+  border-radius: 12px; color: rgba(255,255,255,.9); font-weight: 500;
+}
 
 /* --- 加载动画 --- */
 #loading { text-align: center; padding: 100px 20px; }

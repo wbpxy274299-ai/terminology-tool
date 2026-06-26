@@ -1,38 +1,30 @@
 @echo off
 chcp 65001 >nul
-title 游戏术语校对工具
+title Game Terminology Tool + Post Assistant
 echo ============================================
-echo   游戏术语校对工具 - 启动中...
+echo   Game Terminology Tool + Post Assistant
 echo ============================================
 echo.
 
-:: 尝试用 Python 启动（最常见）
-where python >nul 2>&1
-if %errorlevel%==0 (
-    echo [OK] 找到 Python，启动本地服务...
-    python -m http.server 8080
-    goto :end
+:: 检查 Node.js
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Node.js not found
+    echo Please install Node.js: https://nodejs.org/
+    echo.
+    pause
+    exit /b 1
 )
 
-:: 尝试 python3
-where python3 >nul 2>&1
-if %errorlevel%==0 (
-    echo [OK] 找到 Python3，启动本地服务...
-    python3 -m http.server 8080
-    goto :end
-)
-
-:: 尝试 Node.js
-where npx >nul 2>&1
-if %errorlevel%==0 (
-    echo [OK] 找到 Node.js，启动本地服务...
-    npx http-server -p 8080 -o
-    goto :end
-)
-
-echo [ERROR] 未找到 Python 或 Node.js
-echo 请安装 Python 后重试：https://www.python.org/downloads/
+echo [OK] Found Node.js
 echo.
-pause
 
-:end
+:: 检查是否有 node_modules
+if not exist node_modules (
+    echo [INFO] Installing dependencies...
+    npm install
+    echo.
+)
+
+echo [OK] Starting server...
+node server.js
